@@ -35,3 +35,11 @@ dist/
 /datasets
 /models
 /output
+
+
+apex/*
+cocoapi/*
+labels.json
+results/*
+inference/*
+log.txt

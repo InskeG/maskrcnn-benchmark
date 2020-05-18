@@ -21,3 +21,8 @@ class ConcatDataset(_ConcatDataset):
     def get_img_info(self, idx):
         dataset_idx, sample_idx = self.get_idxs(idx)
         return self.datasets[dataset_idx].get_img_info(sample_idx)
+
+    # def get_indices(self):
+    #     print(self.datasets)
+    #     dataset_idx, sample_idx = self.get_idxs(idx)
+    #     return self.datasets[dataset_idx].get_indices()

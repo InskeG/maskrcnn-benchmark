@@ -18,17 +18,18 @@ def do_coco_evaluation(
     iou_types,
     expected_results,
     expected_results_sigma_tol,
+    image_ids = None
 ):
     logger = logging.getLogger("maskrcnn_benchmark.inference")
 
     if box_only:
         logger.info("Evaluating bbox proposals")
         areas = {"all": "", "small": "s", "medium": "m", "large": "l"}
-        res = COCOResults("box_proposal")
+        res = COCOResults(dataset, "box_proposal")
         for limit in [100, 1000]:
             for area, suffix in areas.items():
                 stats = evaluate_box_proposals(
-                    predictions, dataset, area=area, limit=limit
+                    predictions, dataset, area=area, limit=limit, image_ids=image_ids
                 )
                 key = "AR{}@{:d}".format(suffix, limit)
                 res.results["box_proposal"][key] = stats["ar"].item()
@@ -41,7 +42,7 @@ def do_coco_evaluation(
     coco_results = {}
     if "bbox" in iou_types:
         logger.info("Preparing bbox results")
-        coco_results["bbox"] = prepare_for_coco_detection(predictions, dataset)
+        coco_results["bbox"] = prepare_for_coco_detection(predictions, dataset, image_ids=image_ids)
     if "segm" in iou_types:
         logger.info("Preparing segm results")
         coco_results["segm"] = prepare_for_coco_segmentation(predictions, dataset)
@@ -49,13 +50,18 @@ def do_coco_evaluation(
         logger.info('Preparing keypoints results')
         coco_results['keypoints'] = prepare_for_coco_keypoint(predictions, dataset)
 
-    results = COCOResults(*iou_types)
+    results = COCOResults(dataset, *iou_types)
     logger.info("Evaluating predictions")
     for iou_type in iou_types:
         with tempfile.NamedTemporaryFile() as f:
             file_path = f.name
             if output_folder:
                 file_path = os.path.join(output_folder, iou_type + ".json")
+            for catId in dataset.coco.getCatIds():
+                res = evaluate_predictions_on_coco(
+                    dataset.coco, coco_results[iou_type], file_path, iou_type, catId
+                )
+                results.update(res)
             res = evaluate_predictions_on_coco(
                 dataset.coco, coco_results[iou_type], file_path, iou_type
             )
@@ -67,11 +73,16 @@ def do_coco_evaluation(
     return results, coco_results
 
 
-def prepare_for_coco_detection(predictions, dataset):
+def prepare_for_coco_detection(predictions, dataset, image_ids=None):
     # assert isinstance(dataset, COCODataset)
     coco_results = []
-    for image_id, prediction in enumerate(predictions):
-        original_id = dataset.id_to_img_map[image_id]
+    for i, prediction in enumerate(predictions):
+        if image_ids is not None:
+            image_id = image_ids[i]
+            original_id = image_id
+        else:
+            image_id = i
+            original_id = dataset.id_to_img_map[image_id]
         if len(prediction) == 0:
             continue
 
@@ -187,7 +198,7 @@ def prepare_for_coco_keypoint(predictions, dataset):
 
 # inspired from Detectron
 def evaluate_box_proposals(
-    predictions, dataset, thresholds=None, area="all", limit=None
+    predictions, dataset, thresholds=None, area="all", limit=None, image_ids=None
 ):
     """Evaluate detection proposal recall metrics. This function is a much
     faster alternative to the official COCO API recall evaluation code. However,
@@ -220,8 +231,13 @@ def evaluate_box_proposals(
     gt_overlaps = []
     num_pos = 0
 
-    for image_id, prediction in enumerate(predictions):
-        original_id = dataset.id_to_img_map[image_id]
+    for i, prediction in enumerate(predictions):
+        if image_ids is not None:
+            image_id = image_ids[i]
+            original_id = image_id
+        else:
+            image_id = i
+            original_id = dataset.id_to_img_map[i]
 
         img_info = dataset.get_img_info(image_id)
         image_width = img_info["width"]
@@ -303,7 +319,7 @@ def evaluate_box_proposals(
 
 
 def evaluate_predictions_on_coco(
-    coco_gt, coco_results, json_result_file, iou_type="bbox"
+    coco_gt, coco_results, json_result_file, iou_type="bbox", catId=None
 ):
     import json
 
@@ -317,6 +333,8 @@ def evaluate_predictions_on_coco(
 
     # coco_dt = coco_gt.loadRes(coco_results)
     coco_eval = COCOeval(coco_gt, coco_dt, iou_type)
+    if catId:
+        coco_eval.params.catIds = [catId]
     coco_eval.evaluate()
     coco_eval.accumulate()
     coco_eval.summarize()
@@ -340,7 +358,7 @@ class COCOResults(object):
         "keypoints": ["AP", "AP50", "AP75", "APm", "APl"],
     }
 
-    def __init__(self, *iou_types):
+    def __init__(self, dataset, *iou_types):
         allowed_types = ("box_proposal", "bbox", "segm", "keypoints")
         assert all(iou_type in allowed_types for iou_type in iou_types)
         results = OrderedDict()
@@ -349,6 +367,7 @@ class COCOResults(object):
                 [(metric, -1) for metric in COCOResults.METRICS[iou_type]]
             )
         self.results = results
+        self.dataset = dataset
 
     def update(self, coco_eval):
         if coco_eval is None:
@@ -358,19 +377,40 @@ class COCOResults(object):
         assert isinstance(coco_eval, COCOeval)
         s = coco_eval.stats
         iou_type = coco_eval.params.iouType
+        catIds = coco_eval.params.catIds
         res = self.results[iou_type]
         metrics = COCOResults.METRICS[iou_type]
-        for idx, metric in enumerate(metrics):
-            res[metric] = s[idx]
+
+        # if current eval is single catId, add to results
+        if len(catIds) is 1:
+            res[catIds[0]] = {}
+            for idx, metric in enumerate(metrics):
+                res[catIds[0]][metric] = s[idx]
+        else:
+            for idx, metric in enumerate(metrics):
+                res[metric] = s[idx]
 
     def __repr__(self):
         results = '\n'
         for task, metrics in self.results.items():
             results += 'Task: {}\n'.format(task)
-            metric_names = metrics.keys()
-            metric_vals = ['{:.4f}'.format(v) for v in metrics.values()]
-            results += (', '.join(metric_names) + '\n')
-            results += (', '.join(metric_vals) + '\n')
+            metric_names = []
+            metric_vals = []
+            for key, value in metrics.items():
+                if isinstance(value, dict):
+                    key = self.dataset.categories[key]
+                    for metric_key, metric_value in value.items():
+                        metric_key = str(key) + "_" + str(metric_key)
+                        metric_names.append(metric_key)
+                        metric_vals.append(str(metric_value))
+                else:
+                    metric_names.append(str(key))
+                    metric_vals.append(str(value))
+            #metric_vals = ['{:.4f}'.format(v) for v in metrics.values() if not isinstance(v, dict)]
+            for i, metric_name in enumerate(metric_names):
+                results += (f'{metric_name}: {metric_vals[i]}' + '\n')
+            # results += (', '.join(metric_names) + '\n')
+            # results += (', '.join(metric_vals) + '\n')
         return results
 
 

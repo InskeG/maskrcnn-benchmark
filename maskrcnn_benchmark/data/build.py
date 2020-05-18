@@ -2,6 +2,7 @@
 import bisect
 import copy
 import logging
+import sys
 
 import torch.utils.data
 from maskrcnn_benchmark.utils.comm import get_world_size
@@ -13,6 +14,9 @@ from . import samplers
 
 from .collate_batch import BatchCollator, BBoxAugCollator
 from .transforms import build_transforms
+
+
+from maskrcnn_benchmark.data.datasets.evaluation.panorams import do_conversion_coco_format
 
 
 def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
@@ -57,7 +61,10 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
     return [dataset]
 
 
-def make_data_sampler(dataset, shuffle, distributed):
+def make_data_sampler(dataset, shuffle, distributed, subset=False, indices=False):
+    if subset:
+        indices = dataset.get_indices()
+        return torch.utils.data.sampler.SubsetRandomSampler(indices)
     if distributed:
         return samplers.DistributedSampler(dataset, shuffle=shuffle)
     if shuffle:
@@ -160,8 +167,16 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
         save_labels(datasets, cfg.OUTPUT_DIR)
 
     data_loaders = []
-    for dataset in datasets:
-        sampler = make_data_sampler(dataset, shuffle, is_distributed)
+    for i, dataset in enumerate(datasets):
+        dataset_name = dataset_list[i]
+        if "panorams" in dataset_name:
+            #do_conversion_coco_format(dataset, "/home/inskeg/data/ams/panorams/", "ann_panorams_test_noisy_split_cocostyle")
+            #do_conversion_coco_format(dataset, "/home/inskeg/data/ams/panorams/", "ann_panorams_train_gt_split_cocostyle")
+            #sys.exit()
+            sampler = make_data_sampler(dataset, shuffle, is_distributed, 
+                        subset = True)
+        else:
+            sampler = make_data_sampler(dataset, shuffle, is_distributed)
         batch_sampler = make_batch_data_sampler(
             dataset, sampler, aspect_grouping, images_per_gpu, num_iters, start_iter
         )
@@ -174,6 +189,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
             batch_sampler=batch_sampler,
             collate_fn=collator,
         )
+        
         data_loaders.append(data_loader)
     if is_train or is_for_period:
         # during training, a single (possibly concatenated) data_loader is returned

@@ -3,6 +3,8 @@ import logging
 import time
 import os
 
+import numpy as np
+
 import torch
 from tqdm import tqdm
 
@@ -33,6 +35,11 @@ def compute_on_dataset(model, data_loader, device, timer=None):
                     torch.cuda.synchronize()
                 timer.toc()
             output = [o.to(cpu_device) for o in output]
+        ######  fix for PanorAMS  #####
+        image_ids = image_ids[0]
+        if isinstance(image_ids, int):
+            image_ids = [image_ids]
+        ###############################
         results_dict.update(
             {img_id: result for img_id, result in zip(image_ids, output)}
         )
@@ -58,7 +65,8 @@ def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
 
     # convert to a list
     predictions = [predictions[i] for i in image_ids]
-    return predictions
+    image_ids = [i for i in image_ids]
+    return predictions, image_ids
 
 
 def inference(
@@ -100,7 +108,7 @@ def inference(
         )
     )
 
-    predictions = _accumulate_predictions_from_multiple_gpus(predictions)
+    predictions, image_ids = _accumulate_predictions_from_multiple_gpus(predictions)
     if not is_main_process():
         return
 
@@ -112,6 +120,7 @@ def inference(
         iou_types=iou_types,
         expected_results=expected_results,
         expected_results_sigma_tol=expected_results_sigma_tol,
+        image_ids = image_ids
     )
 
     return evaluate(dataset=dataset,
