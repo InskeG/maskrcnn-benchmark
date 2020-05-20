@@ -3,6 +3,7 @@ import bisect
 import copy
 import logging
 import sys
+import os
 
 import torch.utils.data
 from maskrcnn_benchmark.utils.comm import get_world_size
@@ -170,9 +171,9 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
     for i, dataset in enumerate(datasets):
         dataset_name = dataset_list[i]
         if "panorams" in dataset_name:
-            #do_conversion_coco_format(dataset, "/home/inskeg/data/ams/panorams/", "ann_panorams_test_noisy_split_cocostyle")
-            #do_conversion_coco_format(dataset, "/home/inskeg/data/ams/panorams/", "ann_panorams_train_gt_split_cocostyle")
-            #sys.exit()
+            # ann_filename = "ann_" + dataset_name + "_cocostyle"
+            # do_conversion_coco_format(dataset, "/home/inskeg/data/ams/panorams/ann_files")
+            # sys.exit()
             sampler = make_data_sampler(dataset, shuffle, is_distributed, 
                         subset = True)
         else:

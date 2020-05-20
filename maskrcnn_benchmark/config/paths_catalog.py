@@ -106,54 +106,29 @@ class DatasetCatalog(object):
             "ann_file": "cityscapes/annotations/instancesonly_filtered_gtFine_test.json"
         }, 
         "panorams_train": {
-            "root": "/home/inskeg/data/ams",
-            "img_dir": "panos/images_padded",
-            "boxes_file": "panorams_boxes.hdf5",
-            "ann_file": "ann_file_panorams.json",
-            "gt_test": False
+            "gt": False
         }, 
-        "panorams_val": {
-            "root": "/home/inskeg/data/ams",
-            "img_dir": "panos/images_padded",
-            "boxes_file": "panorams_boxes.hdf5",
-            "ann_file": "ann_file_panorams.json",
-            "gt_test": False
+        "panorams_train_mini": {
+            "gt": False
         }, 
-        "panorams_test_noisy": {
-            "root": "/home/inskeg/data/ams",
-            "img_dir": "panos/images_padded",
-            "boxes_file": "panorams_boxes.hdf5",
-            "ann_file": "ann_panorams_test_noisy_cocostyle.json",
-            "gt_test": False
-        },
-        "panorams_train_gt": {
-            "root": "/home/inskeg/data/ams",
-            "img_dir": "panos/images_padded",
-            "boxes_file": "panorams_boxes_gt.hdf5",
-            "ann_file": "ann_panorams_train_gt_split_cocostyle.json",
-            "gt_test": True
-        },
-        "panorams_test_gt_split": {
-            "root": "/home/inskeg/data/ams",
-            "img_dir": "panos/images_padded",
-            "boxes_file": "panorams_boxes_gt.hdf5",
-            "ann_file": "ann_panorams_test_gt_split_cocostyle.json",
-            "gt_test": True
-        },
-        "panorams_test_noisy_split": {
-            "root": "/home/inskeg/data/ams",
-            "img_dir": "panos/images_padded",
-            "boxes_file": "panorams_boxes.hdf5",
-            "ann_file": "ann_panorams_test_noisy_split_cocostyle.json",
-            "gt_test": False
-        },
+        "panorams_train_mini_gt": {
+            "gt": True
+        }, 
+        "panorams_val_mini_gt": {
+            "gt": True
+        }, 
+        "panorams_test": {
+            "gt": False
+        }, 
+        "panorams_test_mini": {
+            "gt": False
+        }, 
+        "panorams_test_mini_gt": {
+            "gt": False
+        }, 
         "panorams_test_gt": {
-            "root": "/home/inskeg/data/ams",
-            "img_dir": "panos/images_padded",
-            "boxes_file": "panorams_boxes_gt.hdf5",
-            "ann_file": "ann_panorams_test_gt_cocostyle.json",
-            "gt_test": True
-        }
+            "gt": True
+        }, 
     }
 
     @staticmethod
@@ -161,38 +136,32 @@ class DatasetCatalog(object):
         if "panorams" in name:
             # save new ann_file --- check make_data_loader in data/build.py
             attrs = DatasetCatalog.DATASETS[name]
-            data_dir = attrs['root']
+            data_dir = "/home/inskeg/data/ams"
+            img_dir = "panos/images_padded"
             
             pano_ids = pd.read_csv(os.path.join(data_dir, "panorams", "panorams_time_rank_pano_id.csv"))
             pano_ids = pano_ids.sort_values(by=['time_rank'])
             pano_ids = pano_ids['pano_id'].tolist()
 
-            if ("train_gt" in name):
-                indices_file_name = "panorams_gt_train_split.csv"
-            elif ("train" in name) or ("val" in name):
-                indices_file_name = "panorams_train_valset_idx.csv"
-            elif ("test_noisy_split" in name):
-                indices_file_name = "panorams_gt_test_split.csv"
-            # elif "val" in name:
-            #     indices_file_name = "panorams_valset_idx.csv"
-            elif ("test_gt_split" in name):
-                indices_file_name = "panorams_gt_test_split.csv"
-            elif ("test_gt" in name):
-                indices_file_name = "panorams_gt_entire.csv"
-            else:
-                indices_file_name = "panorams_gt_entire.csv"
-            indices = pd.read_csv(os.path.join(data_dir, "panorams", indices_file_name))
+            indices_file_name = "idx_set_{}.csv".format(name)
+            indices = pd.read_csv(os.path.join(data_dir, "panorams", "indices_sets", indices_file_name))
             indices = indices.time_rank.tolist()
 
-            gt_test = attrs['gt_test']
+            ann_file = "ann_" + name + "_cocostyle" + ".json"
+            
+            gt = attrs['gt']
+            if gt:
+                boxes_file = "panorams_boxes_gt.hdf5"
+            else:
+                boxes_file = "panorams_boxes.hdf5"
 
             args = dict(
-                img_dir = os.path.join(data_dir, attrs["img_dir"]),
-                boxes_file=os.path.join(data_dir, "panorams", attrs["boxes_file"]),
-                ann_file=os.path.join(data_dir, "panorams", attrs["ann_file"]),
+                img_dir = os.path.join(data_dir, img_dir),
+                boxes_file=os.path.join(data_dir, "panorams", boxes_file),
+                ann_file=os.path.join(data_dir, "panorams", "ann_files", ann_file),
                 pano_ids = pano_ids,
                 indices = indices,
-                gt_test=gt_test
+                gt=gt
             )
             return dict(
                 factory="PanorAMSDataset",

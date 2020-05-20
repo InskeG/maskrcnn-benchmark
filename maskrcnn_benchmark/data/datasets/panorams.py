@@ -47,7 +47,7 @@ class PanorAMSDataset(object):
     )
 
     def __init__(self, img_dir, boxes_file, ann_file, pano_ids, indices, 
-        gt_test=False, transforms=None):
+        gt=False, transforms=None):
         # as you would do normally
         self.boxes_file = boxes_file
         self.ann_file = ann_file
@@ -71,7 +71,7 @@ class PanorAMSDataset(object):
             v: k for k, v in self.json_category_id_to_contiguous_id.items()
         }
 
-        if gt_test:
+        if gt:
             self.dataset_root_boxes = "gt_boxes"
             self.dataset_root_boxes_labels = "gt_label_boxes"
         else:
