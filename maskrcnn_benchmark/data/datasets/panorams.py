@@ -65,10 +65,10 @@ class PanorAMSDataset(object):
         self.coco = COCO(ann_file)
         self.categories = {cat['id']: cat['name'] for cat in self.coco.cats.values()}
         self.json_category_id_to_contiguous_id = {
-            v: i + 1 for i, v in enumerate(self.coco.getCatIds())
+             v: i + 1 for i, v in enumerate(self.coco.getCatIds())
         }
         self.contiguous_category_id_to_json_id = {
-            v: k for k, v in self.json_category_id_to_contiguous_id.items()
+             v: k for k, v in self.json_category_id_to_contiguous_id.items()
         }
 
         if gt:
@@ -97,14 +97,14 @@ class PanorAMSDataset(object):
 
         indices = np.arange(boxes.shape[0])
 
-        # width = boxes[:, 2] - boxes[:, 0]
-        # filter = np.asarray(width >= 20).nonzero()
-        # boxes = boxes[filter]
-        # labels = labels[filter]
-        # height = boxes[:, 3] - boxes[:, 1]
-        # filter = np.asarray(height >= 20).nonzero()
-        # boxes = boxes[filter]
-        # labels = labels[filter]
+        width = boxes[:, 2] - boxes[:, 0]
+        filter = np.asarray(width >= 30).nonzero()
+        boxes = boxes[filter]
+        labels = labels[filter]
+        height = boxes[:, 3] - boxes[:, 1]
+        filter = np.asarray(height >= 30).nonzero()
+        boxes = boxes[filter]
+        labels = labels[filter]
 
         #adjust x coordinates for 25px circular padding of image
         boxes[:, 0] = boxes[:, 0] + 25

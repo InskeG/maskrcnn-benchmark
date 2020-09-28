@@ -108,11 +108,26 @@ class DatasetCatalog(object):
         "panorams_train": {
             "gt": False
         }, 
+        "panorams_train_sparse": {
+            "gt": False
+        }, 
+        "panorams_train_many_boxes": {
+            "gt": False
+        }, 
+        "panorams_test_noisy_small": {
+            "gt": False
+        }, 
         "panorams_train_mini": {
             "gt": False
         }, 
         "panorams_train_mini_gt": {
             "gt": True
+        }, 
+        "panorams_train_gt_small": {
+            "gt": True
+        }, 
+        "panorams_val": {
+            "gt": False
         }, 
         "panorams_val_mini_gt": {
             "gt": True
@@ -123,12 +138,15 @@ class DatasetCatalog(object):
         "panorams_test_mini": {
             "gt": False
         }, 
-        "panorams_test_mini_gt": {
-            "gt": False
+        "panorams_test_gt_small": {
+            "gt": True
         }, 
         "panorams_test_gt": {
             "gt": True
         }, 
+        "panorams_test_noisy": {
+            "gt": False
+        }
     }
 
     @staticmethod

@@ -171,9 +171,8 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
     for i, dataset in enumerate(datasets):
         dataset_name = dataset_list[i]
         if "panorams" in dataset_name:
-            # ann_filename = "ann_" + dataset_name + "_cocostyle"
-            # do_conversion_coco_format(dataset, "/home/inskeg/data/ams/panorams/ann_files")
-            # sys.exit()
+            #do_conversion_coco_format(dataset, "/home/inskeg/data/ams/panorams/ann_files", dataset_name)
+            #sys.exit()
             sampler = make_data_sampler(dataset, shuffle, is_distributed, 
                         subset = True)
         else:

@@ -25,7 +25,7 @@ def do_conversion_coco_format(dataset, output_folder, dataset_name=None):
 
     if dataset_name is None:
         dataset_name = dataset.__class__.__name__ 
-        ann_filename = "ann_" + dataset_name + "_cocostyle" + ".json"
+    ann_filename = "ann_" + dataset_name + "_cocostyle" + ".json"
     coco_annotation_path = os.path.join(output_folder, ann_filename)
     logger.info("Saving annotations to %s" % coco_annotation_path)
     with open(coco_annotation_path, "w") as f:
