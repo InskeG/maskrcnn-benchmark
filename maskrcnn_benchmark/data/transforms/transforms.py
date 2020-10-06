@@ -119,3 +119,22 @@ class Normalize(object):
         if target is None:
             return image
         return image, target
+
+
+class RandomResize(object):
+    def __init__(self, min_size, max_size):
+        self.min_size = min_size
+        self.max_size = max_size
+
+    def get_size(self, image_size):
+        w, h = image_size
+        min_size = self.min_size
+        max_size = self.max_size
+        rand = random.randint(min_size, max_size)
+        return rand, int(w*rand/h)
+
+    def __call__(self, image, target):
+        size = self.get_size(image.size)
+        image = F.resize(image, size)
+        target = target.resize(image.size)
+        return image, target

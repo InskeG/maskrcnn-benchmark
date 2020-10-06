@@ -43,3 +43,11 @@ labels.json
 results/*
 inference/*
 log.txt
+
+
+.DS_Store
+.DS_Store
+._.DS_Store
+**/.DS_Store
+**/._.DS_Store
+

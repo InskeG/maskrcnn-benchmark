@@ -20,6 +20,10 @@ def evaluate(dataset, predictions, output_folder, **kwargs):
     )
     if isinstance(dataset, datasets.PanorAMSDataset):
         return coco_evaluation(**args)
+    elif isinstance(dataset, datasets.PanorAMSDatasetFromBoxesIndicesFile):
+        return coco_evaluation(**args)
+    elif isinstance(dataset, datasets.PanorAMSDatasetSemiSupervised):
+        return coco_evaluation(**args) 
     elif isinstance(dataset, datasets.COCODataset):
         return coco_evaluation(**args)
     elif isinstance(dataset, datasets.PascalVOCDataset):

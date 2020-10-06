@@ -35,8 +35,8 @@ MODEL:
     SHARE_BOX_FEATURE_EXTRACTOR: False
   MASK_ON: False
 DATASETS:
-  TRAIN: ("panorams_train_gt",)
-  TEST: ("panorams_test_gt_split",)
+  TRAIN: ("panorams_train_gt_small",)
+  TEST: ("panorams_test_gt_small",)
 DATALOADER:
   SIZE_DIVISIBILITY: 32
   ASPECT_RATIO_GROUPING: False

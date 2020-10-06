@@ -4,6 +4,7 @@ from .coco import COCODataset
 from .voc import PascalVOCDataset
 from .concat_dataset import ConcatDataset
 from .abstract import AbstractDataset
-from .panorams import PanorAMSDataset
+from .panorams import PanorAMSDataset, PanorAMSDatasetFromBoxesIndicesFile, PanorAMSDatasetSemiSupervised
 
-__all__ = ["COCODataset", "ConcatDataset", "PascalVOCDataset", "AbstractDataset", "PanorAMSDataset"]
+__all__ = ["COCODataset", "ConcatDataset", "PascalVOCDataset", "AbstractDataset", 
+            "PanorAMSDataset", "PanorAMSDatasetFromBoxesIndicesFile", "PanorAMSDatasetSemiSupervised"]

@@ -105,48 +105,59 @@ class DatasetCatalog(object):
             "img_dir": "cityscapes/images",
             "ann_file": "cityscapes/annotations/instancesonly_filtered_gtFine_test.json"
         }, 
+        "panorams_noisyTrain": {
+            "semi":         False,
+            "gt":           False
+        }, 
+        "panorams_noisyTrain_semi": {
+            "semi":         True,
+            "noisy_set":     "panorams_noisyTrain",
+            "clean_set":     "panorams_train_gt_small",
+        }, 
         "panorams_train": {
+            "semi": False,
             "gt": False
         }, 
         "panorams_train_sparse": {
+            "semi": False,
             "gt": False
         }, 
-        "panorams_train_many_boxes": {
+         "panorams_train_dense": {
+            "semi": False,
             "gt": False
         }, 
-        "panorams_test_noisy_small": {
+        "panorams_train_small": {
+            "semi": False,
             "gt": False
-        }, 
-        "panorams_train_mini": {
-            "gt": False
-        }, 
-        "panorams_train_mini_gt": {
-            "gt": True
         }, 
         "panorams_train_gt_small": {
+            "semi": False,
             "gt": True
         }, 
         "panorams_val": {
+            "semi": False,
             "gt": False
         }, 
-        "panorams_val_mini_gt": {
+        "panorams_test_noisy": {
+            "semi": False,
+            "gt": False
+        }, 
+        "panorams_test_gt": {
+            "semi": False,
             "gt": True
         }, 
-        "panorams_test": {
+         "panorams_test_small": {
+            "semi": False,
             "gt": False
         }, 
-        "panorams_test_mini": {
+         "panorams_test_noisy_small": {
+            "semi": False,
             "gt": False
         }, 
         "panorams_test_gt_small": {
+            "semi": False,
             "gt": True
         }, 
-        "panorams_test_gt": {
-            "gt": True
-        }, 
-        "panorams_test_noisy": {
-            "gt": False
-        }
     }
 
     @staticmethod
@@ -154,37 +165,96 @@ class DatasetCatalog(object):
         if "panorams" in name:
             # save new ann_file --- check make_data_loader in data/build.py
             attrs = DatasetCatalog.DATASETS[name]
-            data_dir = "/home/inskeg/data/ams"
-            img_dir = "panos/images_padded"
+
+            data_dir = "/hddstore/igroenen"
+            img_dir = "images_padded"
+            home_data_dir = "/home/igroene/data/panorams"
+
+            ann_file = "ann_" + name + "_cocostyle" + ".json"
+            boxes_file = "panorams_boxes.hdf5"
             
-            pano_ids = pd.read_csv(os.path.join(data_dir, "panorams", "panorams_time_rank_pano_id.csv"))
+            pano_ids = pd.read_csv(os.path.join(home_data_dir, "panorams_all_ids.csv"))
             pano_ids = pano_ids.sort_values(by=['time_rank'])
             pano_ids = pano_ids['pano_id'].tolist()
 
-            indices_file_name = "idx_set_{}.csv".format(name)
-            indices = pd.read_csv(os.path.join(data_dir, "panorams", "indices_sets", indices_file_name))
-            indices = indices.time_rank.tolist()
+            indices_filter = pd.read_csv(os.path.join(home_data_dir, "panorams_all_ids_fg_boxes.csv"))
+            indices_filter = indices_filter['time_rank'].tolist()
 
-            ann_file = "ann_" + name + "_cocostyle" + ".json"
-            
-            gt = attrs['gt']
-            if gt:
-                boxes_file = "panorams_boxes_gt.hdf5"
+            if attrs['semi']:
+                # gt_indices = "idx_set_{}.csv".format(attrs['clean_set'])
+                # gt_indices = pd.read_csv(os.path.join(home_data_dir, "indices_sets", gt_indices))
+                # gt_indices = gt_indices.loc[gt_indices['time_rank'].isin(indices_filter)]
+                # gt_indices = gt_indices.time_rank.tolist()
+
+                # boxes_gt_indices_file = os.path.join(home_data_dir, "panorams_box_indices_gt.csv")
+                # boxes_gt_indices_file = pd.read_csv(boxes_gt_indices_file)
+
+                gt_indices = "panorams_box_indices_eval_boxes_phase2.csv"
+                gt_indices = pd.read_csv(os.path.join(home_data_dir, gt_indices))
+                gt_indices = gt_indices.loc[gt_indices['time_rank'].isin(indices_filter)]
+                gt_indices = gt_indices.time_rank.tolist()
+
+                boxes_gt_indices_file = "panorams_box_indices_eval_boxes_phase2.csv"
+                boxes_gt_indices_file = pd.read_csv(os.path.join(home_data_dir, boxes_gt_indices_file))
+
+                noisy_indices = "idx_set_{}.csv".format(attrs['noisy_set'])
+                noisy_indices = pd.read_csv(os.path.join(home_data_dir, "indices_sets", noisy_indices))
+                noisy_indices = noisy_indices.loc[noisy_indices['time_rank'].isin(indices_filter)]
+                noisy_indices = noisy_indices.time_rank.tolist()
+
+                boxes_noisy_indices_file = os.path.join(home_data_dir, "panorams_box_indices_noisy.csv")
+                boxes_noisy_indices_file = pd.read_csv(boxes_noisy_indices_file)
+
+                args = dict(
+                    img_dir = os.path.join(data_dir, img_dir),
+                    boxes_file=os.path.join(data_dir, boxes_file),
+                    ann_file=os.path.join(home_data_dir, "ann_files", ann_file),
+                    pano_ids = pano_ids,
+                    gt_indices = gt_indices,
+                    boxes_gt_indices_file = boxes_gt_indices_file,
+                    noisy_indices = noisy_indices,
+                    boxes_noisy_indices_file = boxes_noisy_indices_file
+                )
+                return dict(
+                    factory="PanorAMSDatasetSemiSupervised",
+                    args=args,
+                )
             else:
-                boxes_file = "panorams_boxes.hdf5"
+                indices = "idx_set_{}.csv".format(name)
+                indices = pd.read_csv(os.path.join(home_data_dir, "indices_sets", indices))
+                indices = indices.loc[indices['time_rank'].isin(indices_filter)]
+                indices = indices.time_rank.tolist()
+                
+                gt = attrs['gt']
+                if gt:
+                    # boxes_indices_file = os.path.join(home_data_dir, "panorams_box_indices_gt.csv")
+                    # boxes_indices_file = pd.read_csv(boxes_indices_file)
 
-            args = dict(
-                img_dir = os.path.join(data_dir, img_dir),
-                boxes_file=os.path.join(data_dir, "panorams", boxes_file),
-                ann_file=os.path.join(data_dir, "panorams", "ann_files", ann_file),
-                pano_ids = pano_ids,
-                indices = indices,
-                gt=gt
-            )
-            return dict(
-                factory="PanorAMSDataset",
-                args=args,
-            )
+                    indices = "panorams_box_indices_gt_phase1.csv"
+                    indices = pd.read_csv(os.path.join(home_data_dir, indices))
+                    indices = indices.loc[indices['time_rank'].isin(indices_filter)]
+                    indices = indices.time_rank.tolist()
+
+                    boxes_indices_file = "panorams_box_indices_gt_phase1.csv"
+                    boxes_indices_file = pd.read_csv(os.path.join(home_data_dir, boxes_indices_file))
+                else:
+                    boxes_indices_file = os.path.join(home_data_dir, "panorams_box_indices_noisy.csv")
+                    boxes_indices_file = pd.read_csv(boxes_indices_file)       
+                
+
+                args = dict(
+                    img_dir = os.path.join(data_dir, img_dir),
+                    boxes_file=os.path.join(data_dir, boxes_file),
+                    ann_file=os.path.join(home_data_dir, "ann_files", ann_file),
+                    pano_ids = pano_ids,
+                    indices = indices,
+                    boxes_indices_file = boxes_indices_file,
+                    gt=gt
+                )
+                return dict(
+                    factory="PanorAMSDatasetFromBoxesIndicesFile",
+                    args=args,
+                )
         elif "coco" in name:
             data_dir = DatasetCatalog.DATA_DIR
             attrs = DatasetCatalog.DATASETS[name]

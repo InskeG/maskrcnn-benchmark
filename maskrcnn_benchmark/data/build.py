@@ -62,10 +62,15 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
     return [dataset]
 
 
-def make_data_sampler(dataset, shuffle, distributed, subset=False, indices=False):
+def make_data_sampler(dataset, shuffle, distributed, subset=False, semi_random_subset=False):
     if subset:
-        indices = dataset.get_indices()
-        return torch.utils.data.sampler.SubsetRandomSampler(indices)
+        if semi_random_subset:
+            fixed_indices = dataset.get_gt_indices()
+            variable_indices = dataset.get_noisy_indices()
+            return samplers.SemiRandomSubsetSampler(fixed_indices, variable_indices, num_noisy_samples=50000, without_replacement=True)
+        else:
+            indices = dataset.get_indices()
+            return torch.utils.data.sampler.SubsetRandomSampler(indices)
     if distributed:
         return samplers.DistributedSampler(dataset, shuffle=shuffle)
     if shuffle:
@@ -171,10 +176,13 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
     for i, dataset in enumerate(datasets):
         dataset_name = dataset_list[i]
         if "panorams" in dataset_name:
-            #do_conversion_coco_format(dataset, "/home/inskeg/data/ams/panorams/ann_files", dataset_name)
-            #sys.exit()
+            # do_conversion_coco_format(dataset, "/home/igroene/data/panorams/ann_files", dataset_name)
+            # sys.exit()
+
+            sample_semi_random = dataset.sample_semi_random()
             sampler = make_data_sampler(dataset, shuffle, is_distributed, 
-                        subset = True)
+                        subset = True, semi_random_subset = sample_semi_random)
+
         else:
             sampler = make_data_sampler(dataset, shuffle, is_distributed)
         batch_sampler = make_batch_data_sampler(
